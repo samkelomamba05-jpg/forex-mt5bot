@@ -4,6 +4,28 @@ name: Compile ForexBot MT5
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
+
+jobs:
+  compile:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile MT5 Expert Advisor
+        shell: pwsh
+        run: |
+          $metaeditor = "C:\Program Files\MetaTrader 5\metaeditor64.exe"
+          Write-Host "Preparing MT5 compiler"
+
+name: Compile ForexBot MT5
+
+on:
+  workflow_dispatch:
+  push:
     paths:
       - 'ForexBot.mq5'
       - '.github/workflows/main.yml'

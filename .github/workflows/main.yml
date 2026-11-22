@@ -1,0 +1,66 @@
+
+name: Compile ForexBot MT5
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ForexBot.mq5'
+      - '.github/workflows/main.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: windows-latest
+
+    steps:
+      - name: Download source code
+        uses: actions/checkout@v4
+
+      - name: Install MetaTrader 5
+        shell: pwsh
+        run: |
+          $installer = "$env:TEMP\mt5setup.exe"
+          Invoke-WebRequest `
+            -Uri "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" `
+            -OutFile $installer
+
+          Start-Process -FilePath $installer `
+            -ArgumentList '/auto', '/path:C:\MT5' -Wait
+
+      - name: Compile ForexBot
+        shell: pwsh
+        run: |
+          $editor = Get-ChildItem "C:\MT5" `
+            -Filter "metaeditor64.exe" -Recurse |
+            Select-Object -First 1
+
+          if (-not $editor) {
+            throw "MetaEditor was not found"
+          }
+
+          $experts = "C:\MT5\MQL5\Experts"
+          New-Item -ItemType Directory -Force -Path $experts
+          Copy-Item "ForexBot.mq5" "$experts\ForexBot.mq5"
+
+          & $editor.FullName "/compile:$experts\ForexBot.mq5" /log
+
+          $log = "$experts\ForexBot.log"
+
+          if (-not (Test-Path "$experts\ForexBot.ex5")) {
+            if (Test-Path $log) {
+              Get-Content $log
+            }
+            throw "Compilation failed"
+          }
+
+          Write-Host "ForexBot compiled successfully!"
+          Get-Content $log
+
+      - name: Upload compiled EA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForexBot-EX5
+          path: C:\MT5\MQL5\Experts\ForexBot.ex5
